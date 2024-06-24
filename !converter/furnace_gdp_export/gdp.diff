@@ -1,0 +1,395 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 8f1a53660..7845a3030 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -734,6 +734,7 @@ src/engine/platform/dummy.cpp
+ 
+ src/engine/export/abstract.cpp
+ src/engine/export/amigaValidation.cpp
++src/engine/export/govnodump.cpp
+ 
+ src/engine/effect/abstract.cpp
+ src/engine/effect/dummy.cpp
+diff --git a/src/engine/engine.h b/src/engine/engine.h
+index 14bfd0db2..e50a5f7db 100644
+--- a/src/engine/engine.h
++++ b/src/engine/engine.h
+@@ -656,6 +656,8 @@ class DivEngine {
+     // - -1 to auto-determine trailing
+     // - -2 to add a whole loop of trailing
+     SafeWriter* saveVGM(bool* sysToExport=NULL, bool loop=true, int version=0x171, bool patternHints=false, bool directStream=false, int trailingTicks=-1);
++    // dump to govnodump
++    SafeWriter* saveGovnodump();
+     // dump to ZSM.
+     SafeWriter* saveZSM(unsigned int zsmrate=60, bool loop=true, bool optimize=true);
+     // dump command stream.
+diff --git a/src/engine/export/govnodump.cpp b/src/engine/export/govnodump.cpp
+new file mode 100644
+index 000000000..30af86182
+--- /dev/null
++++ b/src/engine/export/govnodump.cpp
+@@ -0,0 +1,204 @@
++#include "../engine.h"
++#include "../../ta-log.h"
++#include "../../utfutils.h"
++#include "../song.h"
++
++constexpr int MASTER_CLOCK_PREC = (sizeof(void*) == 8) ? 8 : 0;
++
++SafeWriter* DivEngine::saveGovnodump() {
++    stop();
++    repeatPattern = false;
++    setOrder(0);
++    BUSY_BEGIN_SOFT;
++    double origRate = got.rate;
++    got.rate = 44100;
++
++    // determine loop point
++    int loopOrder = 0;
++    int loopRow = 0;
++    int loopEnd = 0;
++    walkSong(loopOrder, loopRow, loopEnd);
++    logI("loop point: %d %d", loopOrder, loopRow);
++    warnings = "";
++
++    curOrder = 0;
++    freelance = false;
++    playing = false;
++    extValuePresent = false;
++    remainingLoops = -1;
++
++    // play the song ourselves
++    bool done = false;
++    bool loop = true;
++    int writeCount = 0;
++
++    int loopPos = -1;
++    int loopTickSong = -1;
++    int songTick = 0;
++
++    bool trailing = false;
++    bool beenOneLoopAlready = false;
++
++    std::vector<DivDelayedWrite> delayedWrites[DIV_MAX_CHIPS];
++    std::vector<std::pair<int, DivDelayedWrite>> sortedWrites;
++    std::vector<size_t> tickPos;
++    std::vector<int> tickSample;
++    int countDown = 1;
++
++    SafeWriter* w = new SafeWriter;
++    w->init();
++
++    // write our header
++    w->write("kurwa bober ja pierdole", sizeof("kurwa bober ja pierdole"));
++
++    // enable register dump for all chips
++    for (int i = 0; i < song.systemLen; i++) {
++        disCont[i].dispatch->toggleRegisterDump(true);
++    }
++
++    // write song data
++    playSub(false);
++    size_t tickCount = 0;
++    bool writeLoop = false;
++    bool alreadyWroteLoop = false;
++    int ord = -1;
++    int exportChans = 0;
++    for (int i = 0; i < chans; i++) {
++        exportChans++;
++        chan[i].wentThroughNote = false;
++        chan[i].goneThroughNote = false;
++    }
++
++    while (!done) {
++        if (loopPos == -1) {
++            if (loopOrder == curOrder && loopRow == curRow) {
++                if ((ticks - ((tempoAccum + virtualTempoN) / virtualTempoD)) <= 0) {
++                    writeLoop = true;
++                }
++            }
++        }
++        songTick++;
++        tickPos.push_back(w->tell());
++        tickSample.push_back(tickCount);
++        if (nextTick(false, true)) {
++            if (trailing) beenOneLoopAlready = true;
++            trailing = true;
++            if (!loop) countDown = 0;
++            for (int i = 0; i < chans; i++) {
++                chan[i].wentThroughNote = false;
++            }
++        }
++        if (trailing) {
++            countDown--;
++            if (song.loopModality != 2) countDown = 0;
++
++            if (countDown > 0 && !beenOneLoopAlready) {
++                loopTickSong++;
++            }
++        }
++        if (countDown <= 0 || !playing || beenOneLoopAlready) {
++            done = true;
++            if (!loop) {
++                for (int i = 0; i < song.systemLen; i++) {
++                    disCont[i].dispatch->getRegisterWrites().clear();
++                }
++                break;
++            }
++            if (!playing) {
++                writeLoop = false;
++                loopPos = -1;
++            }
++        }
++        else {
++            // check for pattern change
++            if (prevOrder != ord) {
++                logI("registering order change %d on %d", prevOrder, prevRow);
++                ord = prevOrder;
++            }
++        }
++        // get register dumps
++        for (int i = 0; i < song.systemLen; i++) {
++            std::vector<DivRegWrite>& writes = disCont[i].dispatch->getRegisterWrites();
++            for (DivRegWrite& j : writes) {
++                w->writeI(song.system[i]);  // write system index
++                w->writeI(j.addr);  // write register index
++                w->writeI(j.val);  // write register data
++                writeCount++;
++            }
++            writes.clear();
++        }
++        // check whether we need to loop
++        int totalWait = cycles >> MASTER_CLOCK_PREC;
++        // render stream of all chips
++        for (int i = 0; i < song.systemLen; i++) {
++            disCont[i].dispatch->fillStream(delayedWrites[i], 44100, totalWait);
++            for (DivDelayedWrite& j : delayedWrites[i]) {
++                sortedWrites.push_back(std::pair<int, DivDelayedWrite>(i, j));
++            }
++            delayedWrites[i].clear();
++        }
++
++        if (!sortedWrites.empty()) {
++            // sort if more than one chip
++            if (song.systemLen > 1) {
++                std::sort(sortedWrites.begin(), sortedWrites.end(), [](const std::pair<int, DivDelayedWrite>& a, const std::pair<int, DivDelayedWrite>& b) -> bool {
++                    return a.second.time < b.second.time;
++                    });
++            }
++
++            // write it out
++            int lastOne = 0;
++            for (std::pair<int, DivDelayedWrite>& i : sortedWrites) {
++                if (i.second.time > lastOne) {
++                    // write delay
++                    int delay = i.second.time - lastOne;
++                    if (delay > 0) {
++                        w->writeI(-2);          // delay
++                        w->writeI(delay);
++                    }
++                    lastOne = i.second.time;
++                }
++                // write write
++                w->writeI(song.system[i.first]);  // write system index
++                w->writeI(i.second.write.addr);  // write register index
++                w->writeI(i.second.write.val);  // write register data
++
++                // handle global Furnace commands
++
++                writeCount++;
++            }
++            sortedWrites.clear();
++            totalWait -= lastOne;
++            tickCount += lastOne;
++        }
++        // write wait
++        if (totalWait > 0) {
++            w->writeI(-2);          // delay
++            w->writeI(totalWait);
++            tickCount += totalWait;
++        }
++        if (writeLoop && !alreadyWroteLoop) {
++            writeLoop = false;
++            alreadyWroteLoop = true;
++            w->writeI(-3);          // loop
++            loopPos = w->tell();
++            loopTickSong = songTick;
++        }
++    }
++
++    got.rate = origRate;
++
++    for (int i = 0; i < song.systemLen; i++) {
++        disCont[i].dispatch->toggleRegisterDump(false);
++    }
++
++    remainingLoops = -1;
++    playing = false;
++    freelance = false;
++    extValuePresent = false;
++
++    logI("%d register writes total.", writeCount);
++
++    BUSY_END;
++    return w;
++}
+diff --git a/src/gui/exportOptions.cpp b/src/gui/exportOptions.cpp
+index 5bbf84a78..eee5b2922 100644
+--- a/src/gui/exportOptions.cpp
++++ b/src/gui/exportOptions.cpp
+@@ -230,6 +230,23 @@ void FurnaceGUI::drawExportText(bool onWindow) {
+   }
+ }
+ 
++void FurnaceGUI::drawExportGovnodump(bool onWindow) {
++    exitDisabledTimer = 1;
++
++    ImGui::Text(
++        "this option exports the song to a very quick and dirty dump format.\n"
++    );
++    if (onWindow) {
++        ImGui::Separator();
++        if (ImGui::Button("Cancel", ImVec2(200.0f * dpiScale, 0))) ImGui::CloseCurrentPopup();
++        ImGui::SameLine();
++    }
++    if (ImGui::Button("Export", ImVec2(200.0f * dpiScale, 0))) {
++        openFileDialog(GUI_FILE_EXPORT_GOVNODUMP);
++        ImGui::CloseCurrentPopup();
++    }
++}
++
+ void FurnaceGUI::drawExportCommand(bool onWindow) {
+   exitDisabledTimer=1;
+   
+@@ -321,6 +338,10 @@ void FurnaceGUI::drawExport() {
+         drawExportDMF(true);
+         ImGui::EndTabItem();
+       }
++      if (ImGui::BeginTabItem("Govnodump")) {
++          drawExportGovnodump(true);
++          ImGui::EndTabItem();
++      }
+       ImGui::EndTabBar();
+     }
+   } else switch (curExportType) {
+@@ -345,6 +366,9 @@ void FurnaceGUI::drawExport() {
+     case GUI_EXPORT_DMF:
+       drawExportDMF(true);
+       break;
++    case GUI_EXPORT_GOVNODUMP:
++        drawExportGovnodump(true);
++        break;
+     default:
+       ImGui::Text("congratulations! you've unlocked a secret panel.");
+       if (ImGui::Button("Toggle hidden systems")) {
+diff --git a/src/gui/gui.cpp b/src/gui/gui.cpp
+index 1fbabc278..afe209120 100644
+--- a/src/gui/gui.cpp
++++ b/src/gui/gui.cpp
+@@ -1885,6 +1885,15 @@ void FurnaceGUI::openFileDialog(FurnaceGUIFileDialogs type) {
+         dpiScale
+       );
+       break;
++    case GUI_FILE_EXPORT_GOVNODUMP:
++      if (!dirExists(workingDirGovnodumpExport)) workingDirGovnodumpExport =getHomeDir();
++      hasOpened=fileDialog->openSave(
++        "Export Govnodump",
++        {"Govnodump file", "*.gdp"},
++        workingDirGovnodumpExport,
++        dpiScale
++      );
++      break;
+     case GUI_FILE_EXPORT_ZSM:
+       if (!dirExists(workingDirZSMExport)) workingDirZSMExport=getHomeDir();
+       hasOpened=fileDialog->openSave(
+@@ -4829,6 +4838,9 @@ bool FurnaceGUI::loop() {
+         case GUI_FILE_EXPORT_VGM:
+           workingDirVGMExport=fileDialog->getPath()+DIR_SEPARATOR_STR;
+           break;
++        case GUI_FILE_EXPORT_GOVNODUMP:
++          workingDirGovnodumpExport=fileDialog->getPath()+DIR_SEPARATOR_STR;
++          break;
+         case GUI_FILE_EXPORT_ZSM:
+           workingDirZSMExport=fileDialog->getPath()+DIR_SEPARATOR_STR;
+           break;
+@@ -4921,6 +4933,9 @@ bool FurnaceGUI::loop() {
+           if (curFileDialog==GUI_FILE_EXPORT_VGM) {
+             checkExtension(".vgm");
+           }
++          if (curFileDialog==GUI_FILE_EXPORT_GOVNODUMP) {
++            checkExtension(".gdp");
++          }
+           if (curFileDialog==GUI_FILE_EXPORT_ZSM) {
+             checkExtension(".zsm");
+           }
+@@ -5279,6 +5294,29 @@ bool FurnaceGUI::loop() {
+               }
+               break;
+             }
++            case GUI_FILE_EXPORT_GOVNODUMP: {
++                SafeWriter* w = e->saveGovnodump();
++                if (w != NULL) {
++                    FILE* f = ps_fopen(copyOfName.c_str(), "wb");
++                    if (f != NULL) {
++                        fwrite(w->getFinalBuf(), 1, w->size(), f);
++                        fclose(f);
++                        pushRecentSys(copyOfName.c_str());
++                    }
++                    else {
++                        showError("could not open file!");
++                    }
++                    w->finish();
++                    delete w;
++                    if (!e->getWarnings().empty()) {
++                        showWarning(e->getWarnings(), GUI_WARN_GENERIC);
++                    }
++                }
++                else {
++                    showError(fmt::sprintf("could not write govnodump! (%s)", e->getLastError()));
++                }
++                break;
++            }
+             case GUI_FILE_EXPORT_ZSM: {
+               SafeWriter* w=e->saveZSM(zsmExportTickRate,zsmExportLoop,zsmExportOptimize);
+               if (w!=NULL) {
+diff --git a/src/gui/gui.h b/src/gui/gui.h
+index 46d1a5713..4c3fdbd9a 100644
+--- a/src/gui/gui.h
++++ b/src/gui/gui.h
+@@ -562,7 +562,9 @@ enum FurnaceGUIFileDialogs {
+ 
+   GUI_FILE_TEST_OPEN,
+   GUI_FILE_TEST_OPEN_MULTI,
+-  GUI_FILE_TEST_SAVE
++  GUI_FILE_TEST_SAVE,
++
++  GUI_FILE_EXPORT_GOVNODUMP,
+ };
+ 
+ enum FurnaceGUIWarnings {
+@@ -592,7 +594,8 @@ enum FurnaceGUIExportTypes {
+   GUI_EXPORT_CMD_STREAM,
+   GUI_EXPORT_AMIGA_VAL,
+   GUI_EXPORT_TEXT,
+-  GUI_EXPORT_DMF
++  GUI_EXPORT_DMF,
++  GUI_EXPORT_GOVNODUMP
+ };
+ 
+ enum FurnaceGUIFMAlgs {
+@@ -1496,6 +1499,7 @@ class FurnaceGUI {
+   String workingDir, fileName, clipboard, warnString, errorString, lastError, curFileName, nextFile, sysSearchQuery, newSongQuery, paletteQuery;
+   String workingDirSong, workingDirIns, workingDirWave, workingDirSample, workingDirAudioExport;
+   String workingDirVGMExport, workingDirZSMExport, workingDirROMExport, workingDirFont, workingDirColors, workingDirKeybinds;
++  String workingDirGovnodumpExport;
+   String workingDirLayout, workingDirROM, workingDirTest;
+   String mmlString[32];
+   String mmlStringW, grooveString, grooveListString, mmlStringModTable;
+@@ -2508,6 +2512,7 @@ class FurnaceGUI {
+   std::vector<String> randomDemoSong;
+ 
+   void drawExportAudio(bool onWindow=false);
++  void drawExportGovnodump(bool onWindow = false);
+   void drawExportVGM(bool onWindow=false);
+   void drawExportZSM(bool onWindow=false);
+   void drawExportAmigaVal(bool onWindow=false);

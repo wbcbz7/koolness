@@ -1,0 +1,52 @@
+TARGET   = esfmplay
+
+BUILD    = dos
+SYSTEM   = pmode
+DEBUG    = all
+DLEVEL   = 0
+RASTER   = 0
+
+INCLUDE  = ..
+
+AS       = nasm.exe
+CC       = wcc386.exe
+CP       = wpp386.exe
+LD       = wlink.exe
+CFLAGS   = -5r -fp5 -fpi87 -zp16 -oneatxh -s -d$(DLEVEL) -bt=$(BUILD) -I=$(INCLUDE)
+LFLAGS   =
+AFLAGS   = -f win32 -l $[&.lst
+
+OBJS     = main.obj esfmout.obj rtctimer.obj textmode.obj opmplay.obj player.obj irq0.obj tinypci.obj
+OBJSTR   = file {$(OBJS)}
+
+LIBS     =
+LIBSTR   = library {$(LIBS)}
+
+all: $(TARGET).exe .symbolic
+
+$(TARGET).exe : $(OBJS) .symbolic
+	%write $(TARGET).lnk debug $(DEBUG)
+	%write $(TARGET).lnk name $(TARGET)
+	%write $(TARGET).lnk option map=$(TARGET).map
+	%write $(TARGET).lnk option eliminate
+	%write $(TARGET).lnk $(OBJSTR)
+#	%write $(TARGET).lnk $(LIBSTR)
+	%write $(TARGET).lnk system $(SYSTEM)
+	$(LD) @$(TARGET).lnk $(LFLAGS)
+	del $(TARGET).lnk
+
+.c.obj:
+	$(CC) $< $(CFLAGS)
+
+.cpp.obj:
+	$(CP) $< $(CFLAGS)
+
+.asm.obj:
+	$(AS) $< $(AFLAGS)
+
+# clean all
+clean: .symbolic
+	del *.lst
+	del *.obj
+	del $(TARGET).exe
+	del *.err

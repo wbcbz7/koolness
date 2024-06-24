@@ -20,6 +20,14 @@ switch to project directory, `wmake` and look for `koolness.exe` in `!polygon` d
 
 the need of two different assemblers is because I have some older sources made in FASM (like grid texture mapper) whose were used in this productions, and I had no time to translate the to NASM. Don't worry much - next time i'll use two different C compilers :D
 
+## .opm converter
+
+if you want to know how did I made these furnace tunes play in musicdisck, take a look on `!converter` directory
+
+## simple DOS player
+
+if you're looking for a simple DOS player for ESFM .opm tunes, head to `!esfmplay` directory.
+
 ## misc info
 
 As you may have noticed, there are two makefiles for both DOS and Win32 versions - the main difference is that Win32 version was used during intro and GUI development for easier debugging and ability to use Rocket for intro synchronization, but it can't actually play tunes due to ESFM emulation core missing.
