@@ -18,11 +18,11 @@ and a little bit of patience :)
 
 switch to project directory, `wmake` and look for `koolness.exe` in `!polygon` directory. `wmake` may fail on non-DOS/Win32 platforms due to `copy` commands in makefile - you can easily fix that for Unix/etc targets
 
-the need of two different assemblers is because I have some older sources made in FASM (like grid texture mapper) whose were used in this productions, and I had no time to translate the to NASM. Don't worry much - next time i'll use two different C compilers :D
+the need of two different assemblers is because I have some older sources made in FASM (like grid texture mapper) whose were used in this production, and I had no time to translate them to NASM. Don't worry much - next time i'll use two different C compilers :D
 
 ## .opm converter
 
-if you want to know how did I made these furnace tunes play in musicdisck, take a look on `!converter` directory
+if you want to know how did I made these furnace tunes play in musicdisk, take a look on `!converter` directory
 
 ## simple DOS player
 
