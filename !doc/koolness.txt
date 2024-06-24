@@ -1,0 +1,136 @@
+
+                               ___^^^___
+                     ///                       \\\
+                    ///                         \\\
+               ====///                           \\\====
+              /// ///     /////         /////     \\\ \\\
+============\\\  <<<   ///    ///    ///    ///    >>>  ///================
+              /// \\\           /////             /// \\\
+               ====\\\                           ///====
+                    \\\                         ///
+                     \\\                       ///                   
+
+  ....t.h.e..................f.u.r.n.a.c.e................p.o.s.s.e...... 
+                                presents
+               
+      =.       k.....o.....o.....l.....n.....E.....S.....S      .=
+........   --------------------------------------------------   .............
+      ='          a n   e s f m    m u s i c  d i s k           `=
+____________       ______________________      _________________________  
+   .  .... _\___________________/_____________________\___________________
+ _________/                  \___________________________        ...........
+
+:: system requirements
+   .min 486DX (maybe even 386+387), 8 MB RAM, VGA, DOS 3.3+ and of course,
+        an ESS AudioDrive/Solo-1 sound card with ESFM (ES1688 or higher)
+        obviously, without ESFM-enabled card you can't hear songs :)
+
+        "nointro" may work even on 4 MB, untested. such high memory req's are
+        because the musicdisk preloads all songs in RAM to quickly switch
+        between them (especially in dos shell mode)
+        
+   .rec Pentium 90, 16 MB RAM, fast PCI VGA card for 60fps
+
+   for ESS ISA cards, make sure that the BLASTER variable is set correctly!
+   Solo-1 is PCI autodetected, but BLASTER settings take precedence.
+
+   works under EMM386/QEMM/Jemm, but if possible, run under HIMEM only
+
+   may work under Win9x (not in the background tho :) if VxD drivers are used
+   WDM drivers seem to block access to ESFM ports and I have no time to fix.
+
+   if you don't have an ESS card, latest DOSBox-X has recently added ESFM
+   emulation - set [sblaster] sbtype=ess688 and oplmode=esfm in dosbox.conf.
+   core=dynamic and cycles=100000 are also recommended.
+   note that (at the moment of release) ESFM emulation is not very optimized,
+   so you may need fast host CPU to run it without glitches.
+
+ :: video settings
+   runs in 320x200 8bpp 60hz, supports VGA mode 0x13, Mode-X and VESA modes
+
+   if possible (an if your machine allow), choose 320x200 VESA linear 60fps,
+   some videocards (like S3 Trio64) are faster in VESA modes than in VGA.
+
+ :: command line
+   auto    - automatic video mode selection
+   potato  - lower graphics quality (may help for a bit)
+   nointro - skip intro
+   rtc     - use RTC IRQ8 for timing instead of IRQ0
+   fast    - remove delays from ESFM register write routine
+             (can be used to improve speed, but may introduce sound glitches)
+
+ :: keys
+   Up/Down - select song
+   Enter   - play selected song
+   +/-     - mixer FM volume up/down
+   L       - toggle play mode (loop one song, shuffled, or sequential)
+   Esc     - exit
+
+   and a couple of additional keys:
+   D       - DOS shell (see below)
+   P       - toggle low and normal graphics quality
+   B       - show debug statistics
+   R       - toggle CPU usage rasterbar
+   F       - toggle remove delays from ESFM register write routine
+ 
+ :: dos shell
+    yes, you can jam to the ESFM tunes and simultaneously work in DOS!
+    note that this is wildly experimental stuff, and i take no responsibility
+    for any screw-ups and bugs - use at your own risk :)
+
+    if any DOS application reprograms IRQ0, music tempo will screw up! in 
+    this case, run musicdisk with "rtc" switch to use RTC IRQ8 instead of IRQ0
+
+    by default, PMODE/W is configured to take all the extended memory in
+    the system, so if you shell out to DOS, EMS/XMS memory is not available.
+    
+    fortunately, there is a workaround :) use external DPMI server such as 
+    HDPMI32, which allocates DPMI memory on demand:
+     ------- cut -----------
+      hdpmi32.exe -r               // make HDPMI32 resident
+      koolness.exe rtc             // use RTC IRQ8 to keep music tempo
+     ------- cut -----------
+    then press 'D' in main menu and you're set!
+    another neat feature of HDPMI32 is that it can run multiple DPMI apps
+    at once - including DOOM ;)
+
+ :: bugs and issues
+    sorry for slow intro - made in a total hurry and totally unoptimized :)
+    dos shell is not quite stable for the same reason
+    
+ :: credits
+    idea, code, gfx and design - wbcbz7 (also known as artёmka)
+    music:
+     1. essneuro (aka Eccentric Super Frequency Modulation) by Abstract 64 
+     2. Cielos ESFuMados by Natt
+     3. Deadline by Raijin
+     4. Devil Detective by Laggy
+     5. experiment by tapekeeper
+     6. Second Start by Spinning Square Waves
+     7. Walk in the Park by PotaJoe
+     8. Napalm-Loader by GTR3QQ (original by Phandral/Sanxion)
+     9. X EVIL SOUL by dj.tuBIG/MaliceX (original by shyoo) 
+
+    lz4 decompressor made from heavily butchered smalllz4 by stephan brumme
+    xlink   by jinx/the coexistence
+
+ :: thanks 
+    tildearrow - for making the best multisystem chiptune tracker in the world!
+    natt       - for awesome tunes and overall interest in the release :)
+    gtr3qq     - for testing on ES1688 and Solo-1
+    pator and grongy - invaluable moral support 
+    thegreaеcodeholio and kagaamin - for DOSBox-X and ESFMu, respectively
+
+ :: contact
+    join furnace tracker discord at https://discord.gg/EfrwT2wq7z!
+
+    for contacting me (artemka), write at t.me/wbcbz7, discord:wbcbz7, or, as
+    last resort, mail to wbcbz7(dot)at(at)gmail(dot)com (sometimes i'm lazy
+    to check email often :)
+
+ :: last words
+    actually the furnace posse is just an one off label solely for this prod
+    but if this will take off, why not? :)
+   
+
+ .26.o6.2o24 - o5.o5.2o24 (post-party version)

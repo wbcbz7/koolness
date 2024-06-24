@@ -1,0 +1,321 @@
+; 32bpp grid texture mapper (for freedirs and other stuff)
+; by wbcbz7 ol.o4.2o17
+
+format MS COFF
+use32     
+
+; ACHTUNG! если что, 360 не делится нацело на 16, как и 180 - на 8 :)
+
+section ".data" data align 32
+
+_dudx       dd  ?
+_dvdx       dd  ?
+_tex        dd  ?
+
+; ------------------------
+
+section ".text" code align 32
+align 32
+
+include "proc32.inc"
+
+; ------------------------
+
+struc grid {
+    .u  dd  ?   ; 24.8 fp (enough, really, also means easier innerloop)
+    .v  dd  ?   ; 24.8 fp   
+    .sz = $-.u
+}
+
+virtual at 0
+    grid grid
+end virtual
+
+; ------------------------
+; code generator macro
+macro grid_tmap_gen xres, bpp, pitch, shift, mask, name  {
+
+; gridtab width
+gw16        =     (xres / 16)
+gw8         =     (xres / 8)
+gw4         =     (xres / 4)
+
+; grid layout
+;
+;   a+-----+b         s = a + ((c - a) * fy); fx, fy - fractional x/y parts
+;    |     |          e = b + ((d - b) * fy);
+;   s*---x-*e         x = s + ((e - s) * fx);
+;    |     |          ^
+;   c+-----+d         ^ lol (not intended btw :D)
+;
+; gridtab is organized as (gw+1)*(h+1) array
+; i.e. if you are doing in 512x384 and 16x16 cells then your gridscreen
+; is 32x24 but your array is 33x25 so extra column\row appears
+
+a_4     =        0*grid.sz
+b_4     =        1*grid.sz
+c_4     =  (gw4+1)*grid.sz
+d_4     =  (gw4+2)*grid.sz
+
+a_8     =        0*grid.sz
+b_8     =        1*grid.sz
+c_8     =  (gw8+1)*grid.sz
+d_8     =  (gw8+2)*grid.sz
+
+a_16    =        0*grid.sz
+b_16    =        1*grid.sz
+c_16    = (gw16+1)*grid.sz
+d_16    = (gw16+2)*grid.sz
+
+; ------------------------------------------
+; uv grid texture mapper, 8x8 cell size
+; dst   - surface pointer
+; src   - grid pointer
+; tex   - texture pointer (256kb aligned)
+; w     - height in cells (width is fixed)
+
+if name eq
+    procname equ grid_tmap_8
+    expname  equ "_grid_tmap_8"
+else
+    procname equ grid_tmap_8#name
+    expname  equ "_grid_tmap_8"#`name
+end if
+
+public procname as expname
+proc   procname c dst:dword, src:dword, tex:dword, h:dword
+locals
+    .sy     grid
+    .sdy    grid
+    .ey     grid
+    .edy    grid
+endl
+
+        pusha                   ; why not?
+        
+        ; setup h_loop
+        mov     esi, [src]      ; 1
+        mov     ecx, [h]        ; .
+        mov     edi, [dst]      ; 2
+        
+    .h_loop:
+        push    ecx             ; 1
+        mov     ecx, gw8       ; 2
+    
+    .w_loop:
+        ; calc s stuff
+        push    ecx                     ; 1
+        mov     eax, [esi+a_8+grid.u]  ; .  | get u
+        
+        mov     ebx, [esi+c_8+grid.u]  ; 2
+        mov     [.sy.u], eax             ; .
+        
+        sub     ebx, eax                ; 2  | ebx = (c.u - a.u)
+        mov     eax, [esi+a_8+grid.v]  ; .  | get v
+        
+        sar     ebx, 3                  ; 3  | ebx = (c.u - a.u) >> 4
+        mov     ecx, [esi+c_8+grid.v]  ; .
+        
+        mov     [.sdy.u], ebx            ; 4
+        sub     ecx, eax                ; .  | ecx = (c.v - a.v)
+        
+        sar     ecx, 3                  ; 5  | ecx = (c.v - a.v) >> 4
+        mov     [.sy.v], eax             ; .
+        
+        ; calc e stuff
+        mov     eax, [esi+b_8+grid.u]  ; 6  | get u
+        mov     ebx, [esi+d_8+grid.u]  ; .
+        
+        sub     ebx, eax                ; 7  | ebx = (d.u - b.u)
+        mov     [.sdy.v], ecx            ; .
+        
+        sar     ebx, 3                  ; 8  | ebx = (d.u - b.u) >> 4
+        mov     [.ey.u], eax             ; .
+        
+        mov     eax, [esi+b_8+grid.v]  ; 9  | get v
+        mov     ecx, [esi+d_8+grid.v]  ; .
+        
+        sub     ecx, eax                ; 10 | ecx = (d.v - b.v)
+        mov     [.edy.u], ebx            ; .
+        
+        sar     ecx, 3                  ; 11 | ecx = (d.v - b.v) >> 4
+        mov     [.ey.v], eax             ; .
+        
+        mov     [.edy.v], ecx            ; 12
+        mov     ecx, 8                 ; .  | prepare y counter
+        
+    .y_loop:
+        ; calc  x stuff
+        push    ecx                     ; 1
+        push    esi                     ; .
+        
+        mov     eax, [.sy.u]             ; 2
+        mov     edx, [.sy.v]             ; .
+        
+        mov     esi, [.ey.u]             ; 3
+        mov     ebx, [.ey.v]             ; .
+        
+        sub     ebx, edx                ; 3
+        sub     esi, eax                ; .
+        
+        sar     ebx, 3                  ; 4
+        push    ebp                     ; .
+        
+        sar     esi, 3                  ; 5
+        mov     ebp, [tex]              ; .
+        
+        ; at this point we have:
+        ; eax = u, esi = du, edx = v, ebx = dv
+        
+        ; xchg ebx, ebp
+        ;shr     ebp, 2                  ; 6 | adjust tex ptr for [4*ebx]
+        mov     ecx, ebx                ; .
+        mov     ebx, ebp                ; 7
+        mov     ebp, ecx                ; .
+        
+        ; eax = u,   esi = du, edx = v, ebp = dv
+        ; ebx = tex, ecx = pixel
+        
+        ; ---------------------------------
+        ; 256x256 8bpp gapjump non-tiled 8.8 inner loop
+        ;       3      2       1
+        ;       1------4-------6-------8-------0
+        ;  u: 0bxxxxxxxxxxxxxxxUUUUUUUUxuuuuuuuu
+        ;  v: 0bxxxxxxxVVVVVVVVxxxxxxxxxvvvvvvvv
+        ; mu: 0b00000000000000011111111011111111
+        ; mv: 0b00000001111111100000000011111111
+        ; du: 0bxxxxxxxxxxxxxxxUUUUUUUU1uuuuuuuu
+        ; dv: 0bxxxxxxxVVVVVVVV111111111vvvvvvvv
+        
+        ; prepare vars
+        ;  u = (( u & FF00) << 1) | ( u & 0xFF);
+        ;  v = (( v & FF00) << 9) | ( v & 0xFF);
+        ; du = ((du & FF00) << 1) | (du & 0xFF) | 0x00100;
+        ; dv = ((dv & FF00) << 9) | (dv & 0xFF) | 0x1FF00;
+        
+        push    eax
+        push    esi
+        
+        and     eax, 0xFF00         ; 1  | esp -> du u
+        and     esi, 0xFF00         ; .
+        
+        shl     esi, 1              ; 2  | du = (du & 0xFF00) << 1
+        pop     ecx                 ; .  | esp -> u
+        
+        shl     eax, 1              ; 3  |  u = ( u & 0xFF00) << 1
+        and     ecx, 0xFF           ; .
+        
+        or      esi, ecx            ; 4  | du = ((du & 0xFF00) << 1) | (du & 0xFF);
+        pop     ecx                 ; .  | esp -> null
+        
+        push    edx                 ; 5  | esp -> v
+        and     edx, 0xFF00         ; .  | 
+        
+        shl     edx, 9              ; 6  |  v = ( v & 0xFF00) << 9
+        and     ecx, 0xFF           ; .
+        
+        or      eax, ecx            ; 7  |  u = (( u & 0xFF00) << 1) | ( u & 0xFF);
+        pop     ecx                 ; .  | esp -> null
+        
+        push    ebp                 ; 8  | esp -> dv
+        and     ebp, 0xFF00         ; .
+        
+        shl     ebp, 9              ; 9
+        and     ecx, 0xFF           ; .
+        
+        or      edx, ecx            ; 10 |  v = (( v & 0xFF00) << 9) | ( v & 0xFF)
+        pop     ecx                 ; .  | esp -> null
+        
+        and     ecx, 0xFF           ; 11
+        or      esi, 0x00100        ; .
+        
+        or      ebp, ecx            ; 12
+        lea     ecx, [eax + edx]    ; .  | grab first pixel ;)
+        
+        or      ebp, 0x1FF00        ; 13
+        
+        repeat  4
+        
+        shr     ecx, 9                  ; 1
+        add     eax, esi                ; .
+        
+        mov     ecx, [ebx + ecx]        ; 4
+        add     edx, ebp                ; .
+        
+        and     eax, 0x1FEFF            ; 3
+        and     edx, 0x1FE00FF          ; .
+        
+        mov     [edi + (2*(%-1))], ecx  ; 4
+        lea     ecx, [eax + edx]        ; . | agi :(
+        
+        shr     ecx, 9                  ; 1
+        add     eax, esi                ; .
+        
+        mov     ecx, [ebx + ecx]        ; 4
+        add     edx, ebp                ; .
+        
+        and     eax, 0x1FEFF            ; 3
+        and     edx, 0x1FE00FF          ; .
+        
+        mov     [edi + (2*(%-1) + 1)], ecx    ; 4
+        lea     ecx, [eax + edx]        ; . | agi :(
+        
+        end repeat
+        
+        ; --------------------------------
+        
+        ; adjust x
+        add     edi, pitch              ; 1
+        pop     ebp                     ; .
+        
+        pop     esi                     ; 2
+        mov     eax, [.sdy.u]            ; .
+        
+        add     [.sy.u], eax             ; 3
+        mov     eax, [.sdy.v]            ; .
+        
+        add     [.sy.v], eax             ; 4
+        mov     eax, [.edy.u]            ; .
+        
+        add     [.ey.u], eax             ; 5
+        mov     eax, [.edy.v]            ; .
+        
+        add     [.ey.v], eax             ; 6
+        pop     ecx
+        
+        dec     ecx                     ; 7
+        jnz     .y_loop                 ; .
+        ; -------------------
+        
+        pop     ecx                     ; 1
+        sub     edi, (8 * pitch) - 8    ; .
+        
+        add     esi, grid.sz            ; 2
+        dec     ecx                     ; .
+        
+        jnz     .w_loop                 ; 3
+        ; -------------------
+        
+        pop     ecx                     ; 1
+        add     esi, grid.sz            ; .
+        
+        add     edi, (8 * pitch) - xres      ; 2
+        dec     ecx                     ; .
+        
+        jnz     .h_loop                 ; 3
+        
+        popa
+        ret
+endp
+
+}
+
+
+xres        =     320
+bpp         =     8
+pitch       =     512
+shift       =     9
+mask        =     0x1FF  
+
+grid_tmap_gen xres, bpp, pitch, shift, mask
+
