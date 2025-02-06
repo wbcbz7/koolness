@@ -100,10 +100,10 @@ edge_draw_flat_avg_a_:
         mov         ebx, [edi]
         and         ebx, 0xFEFEFEFE
         shr         ebx, 1
-        add         ebx, eax
-        mov         [edi], ebx
         add         edi, 4
+        add         ebx, eax
         dec         ecx
+        mov         [edi - 4], ebx
         jnz         .dword_loop 
 
 .skip_dword:
@@ -112,10 +112,10 @@ edge_draw_flat_avg_a_:
 .1px:
         mov         bl, [edi]
         shr         bl, 1
-        add         bl, al
-        mov         [edi], bl
         inc         edi
+        add         bl, al
         dec         edx
+        mov         [edi-1], bl
         jnz         .1px
 
         ; --------------

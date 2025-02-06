@@ -1,0 +1,48 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${WATCOM}/h",
+                "${workspaceFolder}/**"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE",
+                "__X86__",
+                "M_I86",
+                "_M_I86",
+                "_M_IX86=0",
+                "__DOS__",
+                "_DOS",
+                "MSDOS",
+                "__SMALL__=1",
+                "_M_I86SM=__SMALL__",
+                "M_I86SM=__SMALL__",
+                "__cplusplus=1",
+                "__WATCOMC__=1300",
+                "_INTEGRAL_MAX_BITS=32",
+                "_PUSHPOP_SUPPORTED=1",
+                "__near=",
+                "__watcall=",
+                "far=",
+                "_far=",
+                "__far=",
+                "interrupt=",
+                "_interrupt=",
+                "__interrupt=",
+                "asm=__asm",
+                "__declspec(x)=",
+                "__cdecl=\"",
+                "MK_FP(s,o)"
+            ],
+            "windowsSdkVersion": "10.0.22621.0",
+            "compilerPath": "cl.exe",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-msvc-x64"
+        }
+    ],
+    "version": 4
+}

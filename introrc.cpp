@@ -230,26 +230,23 @@ void dirblur(uint8_t* p, int len, int disp) {
     }
 }
 
-void glitch(ptc_surface *surf, glist_t *gl, int vel, int size) {
-    if (vel > 0) {
-        glist_t *p = gl;
-        int randnum = (rand() % (size + 1))+1;
-        int randofs = (rand() % (size + 1));
-        for (int i = 0; i < Y_RES; i++) if ((i != 0) && (((i + randofs) % randnum) != 0)) {*p = *(p-1); p++;} else {
-            randnum = (rand() % (size + 1))+1;
-            p->active = rand() & 1;
-            p->disp   = (rand() % (vel)) & ~1; // four pixels boundary
-            p++;
-        }
-        uint8_t* pd = (uint8_t*)surf->data + surf->pitch;
-        p = gl;
-        glist_t de;
-        memcpy(&de, gl, sizeof(glist_t));
-        for (int k = 1; k < Y_RES-1; k++) {
-            if (p->active) {memcpy(&de, p, sizeof(glist_t));}
-            dirblur(pd, surf->width, de.disp);
-            p++; pd += surf->pitch;
-        }
+void interlace_1px(uint8_t* p, int len) {
+    _asm {
+        mov     edi, p
+        mov     ecx, len
+        shr     ecx, 3  // do 8 pixels at once
+        _loop:
+        mov     eax, [edi + 0]
+        mov     ebx, [edi + 4]
+        shr     eax, 1
+        and     ebx, 0xFEFEFEFE
+        shr     ebx, 1
+        and     eax, 0x7F7F7F7F
+        mov     [edi + 4], ebx
+        add     edi, 8
+        mov     [edi - 8], eax
+        dec     ecx
+        jnz     _loop
     }
 }
 
@@ -285,19 +282,46 @@ void interlace(ptc_surface *surf) {
     }
 }
 
+void glitch(ptc_surface *surf, glist_t *gl, int vel, int size) {
+    if (vel > 0) {
+        glist_t *p = gl;
+        int randnum = (rand() % (size + 1))+1;
+        int randofs = (rand() % (size + 1));
+        for (int i = 0; i < Y_RES; i++) if ((i != 0) && (((i + randofs) % randnum) != 0)) {*p = *(p-1); p++;} else {
+            randnum = (rand() % (size + 1))+1;
+            p->active = rand() & 1;
+            p->disp   = (rand() % (vel)) & ~1; // four pixels boundary
+            p++;
+        }
+        uint8_t* pd = (uint8_t*)surf->data + surf->pitch;
+        p = gl;
+        glist_t de;
+        memcpy(&de, gl, sizeof(glist_t));
+        for (int k = 1; k < Y_RES-1; k++) {
+            if (p->active) {memcpy(&de, p, sizeof(glist_t));}
+            dirblur(pd, surf->width, de.disp);
+            if (k&1) interlace_1px(pd, surf->width);
+            p++; pd += surf->pitch;
+        }
+    } else interlace(surf);
+}
+
 int do_overlay(ptc_surface *dst, glist_t* glist, int glvel, int glsize, float t) {
     // alpha overlay
+#if 0
     rect_blit_subs((uint8_t*)dst->data, (uint8_t*)intro_resources::alpha_overlay->data,
         X_RES>>2, Y_RES, dst->pitch - dst->width, 0
     );
+#else
+    rect_blit_subs_2((uint8_t*)dst->data, (uint8_t*)intro_resources::alpha_overlay->data,
+        X_RES>>3, Y_RES, dst->pitch - dst->width, 0
+    );
+#endif
 
     spritegrid_draw(dst, intro_resources::dot_overlay, common_resources::overgrid, OVR_GRID_SIZE, (X_RES / OVR_GRID_SIZE), (Y_RES / OVR_GRID_SIZE));
 
-    // glitch it
+    // glitch and interlace it
     glitch(dst, glist, glvel, glsize);
-
-    // interlace it
-    interlace(dst);
 
     // draw record indicator
     if ((fmod(t, 0.6) < 0.3)) {
