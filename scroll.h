@@ -30,7 +30,7 @@ const char *scroll_text =
     " 2. Cielos ESFuMados by Natt              " \
     " 3. Deadline by Raijin              "
     " 4. Devil Detective by Laggy              "
-    " 5. experiment by tapekeeper              "
+    " 5. experiment by tapekeep              "
     " 6. Second Start by Spinning Square Waves              "
     " 7. Walk in the Park by PotaJoe              "
     " 8. Napalm-Loader by GTR3QQ (original by Phandral/Sanxion)              "

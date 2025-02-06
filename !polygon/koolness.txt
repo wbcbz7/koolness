@@ -16,7 +16,7 @@
         =.       k.....o.....o.....l.....n.....E.....S.....S      .=
  .........   --------------------------------------------------   ..........
         ='          a n   e s f m    m u s i c  d i s k           `=
-       ..(post-party version - first released at Mutimatograf 2024)..
+     ..(v.1.1 post-party version - first released at Mutimatograf 2024)..
  ____________       ______________________      _________________________  
     .  .... _\___________________/_____________________\___________________
   _________/                  \___________________________        ...........
@@ -44,7 +44,8 @@
    emulation - set [sblaster] sbtype=ess688 and oplmode=esfm in dosbox.conf.
    core=dynamic and cycles=100000 are also recommended.
    note that (at the moment of release) ESFM emulation is not very optimized,
-   so you may need fast host CPU to run it without glitches.
+   so you may need fast host CPU to run it without glitches. 86Box and DOSBox
+   Staging now have ESFM support too, so pick your emul and enjoy :)
 
  :: video settings
    runs in 320x200 8bpp 60hz, supports VGA mode 0x13, Mode-X and VESA modes
@@ -56,6 +57,7 @@
    machines, the scroller may run too fast or not work at all)
 
    ATi users: choose 320x240 VESA (not VGA), vsync on.
+   3dfx Banshee/Voodoo3+: use either 320x240 VESA or 320x200 VGA 60hz
 
  :: command line
    auto    - automatic video mode selection
@@ -64,6 +66,8 @@
    rtc     - use RTC IRQ8 for timing instead of IRQ0
    fast    - remove delays from ESFM register write routine
              (can be used to improve speed, but may introduce sound glitches)
+   enable  - force enable ESFM via mixer (try this if sound is absent)
+   loud    - disable volume control
 
  :: keys
    Up/Down - select song
@@ -111,7 +115,7 @@
      2. Cielos ESFuMados by Natt
      3. Deadline by Raijin
      4. Devil Detective by Laggy
-     5. experiment by tapekeeper
+     5. experiment by tapekeep
      6. Second Start by Spinning Square Waves
      7. Walk in the Park by PotaJoe
      8. Napalm-Loader by GTR3QQ (original by Phandral/Sanxion)
@@ -128,6 +132,9 @@
     gtr3qq     - for testing on ES1688 and Solo-1
     pator and grongy - invaluable moral support 
     thegreatcodeholio and kagamiin - for DOSBox-X and ESFMu, respectively
+    therealzago - for testing on Dell laptop and bug reporting
+
+    philscomputerlab - next time PLEASE ask before duping the capture, ok? :)
 
  :: contact
     join furnace tracker discord at https://discord.gg/EfrwT2wq7z!
@@ -137,7 +144,9 @@
     to check email often :)
 
  :: last words
-    actually the furnace posse is just an one off label solely for this prod
-    but if this will take off, why not?
+    well yea, the furnace posse left as ad-hoc label solely for this release.
+    at Xenium 2024 I (artёmka) teamed up with members of (ex-)ayce, joker,
+    moonshine/etc and now we are bending the chips under an Otomata Labs group
+    check our hottest releases at https://demozoo.org/groups/144484 !  =)
 
- .26.o6.2o24 - o5.o5.2o24
+ .26.o6.2o24 - o5.o5.2o24 - o6.o2.2o25

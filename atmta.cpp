@@ -333,7 +333,7 @@ const char *bottom_text[] = {
     ".by the furnace posse",
     ".code :: design by wbcbz7",
     ".featuring music by abstract64.natt.raijin.djtubig",
-    ".spinningsquarewaves.potajoe.gtr3qq.tapekeeper.laggy",
+    ".spinningsquarewaves.potajoe.gtr3qq.tapekeep.laggy",
     ".released at multimatograf 2o24.",
 };
 
