@@ -159,6 +159,8 @@ int main(int argc, char* argv[]) {
     mainprops.fast_esfm_out = false;
     mainprops.load_from_disk = false;
     mainprops.skip_intro = false;
+    mainprops.activate_mixer = false;
+    mainprops.disable_volume_ctrl = false;
 
     printf("koolnESS - an ESFM music disk - the furnace posse - 2o24\n");
     printf("-----------------------------------\n");
@@ -167,12 +169,14 @@ int main(int argc, char* argv[]) {
     // parse argv
     for (int p = 1; p < argc; p++) {
         if (strstr(argv[p], "?")) {
-            printf("auto    - autosetup\n");
-            printf("rtc     - use RTC for timing instead of IRQ0\n");
-            printf("potato  - lower display quality\n");
-            printf("nointro - skip intro (for 4MB machines)\n");
+            printf("auto     - autosetup\n");
+            printf("rtc      - use RTC for timing instead of IRQ0\n");
+            printf("potato   - lower display quality\n");
+            printf("nointro  - skip intro (for 4MB machines)\n");
             //printf("lowmem  - load songs directly from disk instead of preloading at start\n");
-            printf("fast    - remove delays from ESFM register out (can sound glitchy!)\n");
+            printf("fast     - remove delays from ESFM register out (can sound glitchy!)\n");
+            printf("enable   - force enable ESFM via mixer (try this if no sound)\n");
+            printf("loud     - disable volume control\n");
             return 0;
         }
 #if 0
@@ -191,6 +195,12 @@ int main(int argc, char* argv[]) {
         }
         if (toupper(argv[p][0]) == 'N') {
             mainprops.skip_intro = true;
+        }
+        if (toupper(argv[p][0]) == 'E') {
+            mainprops.activate_mixer = true;
+        }
+        if (toupper(argv[p][0]) == 'L') {
+            mainprops.disable_volume_ctrl = true;
         }
 #if 0
         if (toupper(argv[p][0]) == 'L') {

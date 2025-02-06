@@ -153,6 +153,7 @@ bool esfm_try_detect(uint32_t oplbase) {
 }
 
 void esfm_set_volume(uint32_t volume) {
+    if (mainprops.disable_volume_ctrl) return;
     if (esfm_base != 0x388) {
         volume &= 15;
         outp(esfm_base + 0x04, 54); esfm_delay(1);
@@ -162,6 +163,7 @@ void esfm_set_volume(uint32_t volume) {
 }
 
 uint32_t esfm_get_volume() {
+    if (mainprops.disable_volume_ctrl) return 15;
     if (esfm_base != 0x388) {
         outp(esfm_base + 0x04, 54); esfm_delay(1);
         esfm_volume = inp(esfm_base + 0x05) & 0x0F; esfm_delay(1);
@@ -219,7 +221,7 @@ uint32_t esfm_detect() {
 #endif
 
     // activate ESFM
-    esfm_activate(iobase);
+    if (mainprops.activate_mixer) esfm_activate(iobase);
 
     // try detect here
     if (esfm_try_detect(iobase)) {

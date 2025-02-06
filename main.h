@@ -30,6 +30,12 @@ struct main_props_t {
 
     // skip intro for 4 MB RAM machines (and 386 :D)
     bool skip_intro;
+
+    // activate ESFM input source
+    bool activate_mixer;
+
+    // disable volume controls
+    bool disable_volume_ctrl;
 };
 
 extern "C" {
