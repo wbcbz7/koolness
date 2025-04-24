@@ -233,6 +233,13 @@ inline vec4f mulf(vec4f &lhs, mat4 &rhs) {
     return r;
 }
 
+inline void mulfr(vec4f &r, vec4f &lhs, mat4 &rhs) {
+    r.x = lhs.x*rhs[0] + lhs.y*rhs[1] + lhs.z*rhs[2]  + rhs[3];
+    r.y = lhs.x*rhs[4] + lhs.y*rhs[5] + lhs.z*rhs[6]  + rhs[7];
+    r.z = lhs.x*rhs[8] + lhs.y*rhs[9] + lhs.z*rhs[10] + rhs[11];
+    r.w = lhs.w;
+}
+
 // -----------------------------
 
 inline void matmul2(mat2 &r, mat2 &a, mat2 &b) {

@@ -285,7 +285,7 @@ struct vec4f {
     union {float x; float b;};
     union {float y; float g;};
     union {float z; float r;};
-    union {float w; float a;};
+    union {float w; float a; int32_t iw;};
     
     // add/subtract another vec2f
     inline vec4f& operator+=(const vec4f & rhs) {x += rhs.x; y += rhs.y; z += rhs.z; return *this;}

@@ -385,7 +385,7 @@ void draw_movetab(uint8_t* screen, int frame) {
     }
 #endif
     // draw fixup hole
-    if (!mainprops.lq_mode) rect_blit_subs(screen + X_PITCH*((Y_RES-32)/2) + ((X_RES-32)/2), fixup_hole[0], 32/4, 32, (X_PITCH - 32), 0);
+    if (!mainprops.lq_mode) rect_blit_subs_2(screen + X_PITCH*((Y_RES-32)/2) + ((X_RES-32)/2), fixup_hole[0], 32/8, 32, (X_PITCH - 32), 0);
 }
 
 void draw_module_selector(uint8_t *dst, float t) {
@@ -477,7 +477,9 @@ void run() {
         //ptc_memset(surf.data, 0, surf.pitch * surf.height, 0);
 
         mesh_flist.clear();
+        mesh_flist.reserve(mesh.f.size());
         mesh_zmap.clear();
+        mesh_zmap.reserve(mesh.f.size());
 
         // draw everything here
         vec4f origin = {145, 5, 250};

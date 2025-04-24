@@ -175,7 +175,7 @@ int main(int argc, char* argv[]) {
             printf("nointro  - skip intro (for 4MB machines)\n");
             //printf("lowmem  - load songs directly from disk instead of preloading at start\n");
             printf("fast     - remove delays from ESFM register out (can sound glitchy!)\n");
-            printf("enable   - force enable ESFM via mixer (try this if no sound)\n");
+            printf("enable   - force enable ESFM via mixer (try this if sound is absent)\n");
             printf("loud     - disable volume control\n");
             return 0;
         }

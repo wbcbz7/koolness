@@ -16,10 +16,10 @@ void mesh_load(mesh_t &mesh, const char *filename)
     // copy mesh definitions
     float *pp = mesh.fobj->positions;
     for (int i = 0; i < mesh.fobj->position_count; i++) {
-        mesh.p[i].x = *pp++;
-        mesh.p[i].y = *pp++;
-        mesh.p[i].z = *pp++;
-        mesh.p[i].w = i;            // marker
+        mesh.p[i].x  = *pp++;
+        mesh.p[i].y  = *pp++;
+        mesh.p[i].z  = *pp++;
+        mesh.p[i].iw = i;            // marker
     }
 
     // iterate groups
@@ -38,15 +38,21 @@ void mesh_load(mesh_t &mesh, const char *filename)
 }
 
 void mesh_transform(mesh_t &mesh, mat4 &m) {
-    for (int i = 0; i < mesh.p.size(); i++) {
-        mesh.pt[i] = mulf(mesh.p[i], m);
-    }
+    vec4f *d = &mesh.pt[0];
+    vec4f *s = &mesh.p [0];
+    uint32_t l = mesh.p.size();
+    if (l > 0) do {
+        mulfr(*d++, *s++, m);
+    } while (--l);
 }
 
 void mesh_project(mesh_t &mesh, float fov, int xres, int yres) {
-    for (int i = 0; i < mesh.pt.size(); i++) {
-        proj(mesh.p2d[i], mesh.pt[i], fov, xres, yres);
-    }
+    vec2f *d = &mesh.p2d[0];
+    vec4f *s = &mesh.pt[0];
+    uint32_t l = mesh.p.size();
+    if (l > 0) do {
+        proj(*d++, *s++, fov, xres, yres);
+    } while (--l);
 }
 
 void mesh_calc_nomals(mesh_t &mesh) {
@@ -99,15 +105,15 @@ void mesh_draw(std::vector<facelist_t> &facelist, std::vector<zdata_t> &zmap, me
             for (int i = 0; i < lexp-1; i++) r *= rr;
 
             fl.c = mincolor + (r * (maxcolor - mincolor));
-            vec2f pr = mesh.p2d[clipsrc[0]->w];
+            vec2f pr = mesh.p2d[clipsrc[0]->iw];
             fl.v[0].p.x = fistfx(pr.x);
             fl.v[0].p.y = fistfx(pr.y);
 
-            pr = mesh.p2d[clipsrc[1]->w];
+            pr = mesh.p2d[clipsrc[1]->iw];
             fl.v[1].p.x = fistfx(pr.x);
             fl.v[1].p.y = fistfx(pr.y);
 
-            pr = mesh.p2d[clipsrc[2]->w];
+            pr = mesh.p2d[clipsrc[2]->iw];
             fl.v[2].p.x = fistfx(pr.x);
             fl.v[2].p.y = fistfx(pr.y);
 

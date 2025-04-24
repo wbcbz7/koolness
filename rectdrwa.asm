@@ -93,6 +93,7 @@ rect_fill_sub_:
         pop         ebp
         ret
 
+%if 0
 ; ----------------------------------
 ; src format is interleaved dword pixels/mask
 ; void rect_blit_mask(uint8_t *dst, uint32_t* src, uint32_t width, uint32_t height, uint32_t dst_fixup, uint32_t src_fixup);
@@ -127,6 +128,54 @@ rect_blit_mask_:
         
         pop         ebp
         ret
+
+%else
+; ----------------------------------
+; src format is interleaved dword pixels/mask, process 2 dwords -> 8px per iter
+; void rect_blit_mask(uint8_t *dst, uint32_t* src, uint32_t width, uint32_t height, uint32_t dst_fixup, uint32_t src_fixup);
+; #pragma aux rect_blit_mask parm caller [edi] [esi] [ebx] [ecx] [edx] [eax]
+global  rect_blit_mask_
+rect_blit_mask_:
+        push        ebp
+        mov         ebp, eax
+.y_loop:
+        push        ecx
+        push        ebx
+        mov         ecx, ebx
+.x_loop:
+        mov         eax, [edi]
+        mov         ebx, [edi + 4]
+        
+        and         eax, [esi + 4]
+        and         ebx, [esi + 4 + 8]
+        
+        or          eax, [esi + 0]
+        or          ebx, [esi + 0 + 8]
+
+        mov         [edi], eax
+        add         esi, 16
+
+        mov         [edi + 4], ebx
+        add         edi, 8
+        
+        sub         ecx, 2
+        jnz         .x_loop
+
+        ; -----------------
+        pop         ebx
+        pop         ecx
+        
+        add         edi, edx
+        add         esi, ebp
+
+        dec         ecx
+        jnz         .y_loop
+
+        ; -----------------
+        
+        pop         ebp
+        ret
+%endif
 
 ; ----------------------------------
 ; void rect_blit_mov(uint8_t *dst, uint8_t* src, uint32_t width, uint32_t height, uint32_t dst_fixup, uint32_t src_fixup);
