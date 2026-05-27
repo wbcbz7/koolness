@@ -118,6 +118,7 @@ int player_load_module(player_ctx_t *ctx, char *filename) {
         unlz4_ctx.out_pos = 0;
         if (unlz4_decompress(&unlz4_ctx) == -1) {
             printf("unLZ4 error, aborting!\n");
+            fclose(f);
             return true;
         }
         printf("done\n");
@@ -241,6 +242,7 @@ bool player_init(bool preload) {
                 unlz4_ctx.out_pos = 0;
                 if (unlz4_decompress(&unlz4_ctx) == -1) {
                     printf("unLZ4 error, aborting!\n");
+                    fclose(f);
                     return true;
                 }
                 //printf("done\n");

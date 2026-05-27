@@ -162,7 +162,7 @@ int main(int argc, char* argv[]) {
     mainprops.activate_mixer = false;
     mainprops.disable_volume_ctrl = false;
 
-    printf("koolnESS - an ESFM music disk - the furnace posse - v1.01 - 2o24-2o25\n");
+    printf("koolnESS - an ESFM music disk - the furnace posse - v1.02 - 2o24-2o26\n");
     printf("-----------------------------------\n");
 
     // TODO: command line parsing

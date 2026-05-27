@@ -123,7 +123,7 @@ void print_debug(uint8_t *ptr, uint32_t pitch, float dt) {
         mainprops.use_irq0 ? "IRQ0" : "RTC"
     );
     font_draw_string(ptr, &common_resources::smallfont, buf, 0, 170, pitch);
-    snprintf(buf, sizeof(buf), "frame time: %.2f ms, ESFM delays: %s, lc %d", dt*1000,
+    snprintf(buf, sizeof(buf), "frametime: %.2f ms, ESFM delays: %s, lc %d", dt*1000,
         mainprops.fast_esfm_out ? "no" : "yes",
         player_ctx.nextsong.loop_count
     );
