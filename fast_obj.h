@@ -364,6 +364,8 @@ char* string_concat(const char* a, const char* s, const char* e)
         
     an = a ? strlen(a) : 0;
     sn = (size_t)(e - s);
+    if (sn > SIZE_MAX - an - 1)
+        return 0;
     p = (char*)(memory_realloc(0, an + sn + 1));
     if (p)
     {
