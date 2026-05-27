@@ -34,10 +34,23 @@ main_props_t mainprops = {0};
 
 PTC_MODEHANDLE gfx_mode;
 
+#ifndef WIN32
+#include <i86.h>
+#include <dos.h>
+#include <direct.h>
+
+// dummy Ctrl-Break ISR to prevent accidential exit
+static void (__interrupt __far *int1B_oldhandler)() = NULL;
+void _interrupt _far int1B_handler() {
+}
+
 void close_all() {
 #ifndef WIN32
     // free IRQ0 timer
     irq0_freeTimer();
+
+    // restore Ctrl-Break handler
+    if (int1B_oldhandler != NULL) _dos_setvect(0x1B, int1B_oldhandler);
 
     // set ESFM back to OPL3 mode
     esfm_reset();
@@ -49,18 +62,6 @@ void close_all() {
 #endif
 }
 
-#ifndef WIN32
-#include <i86.h>
-#include <dos.h>
-#include <direct.h>
-static void (__interrupt __far *irq2F_oldhandler)();  // internal procedure - old INT70h handler
-void _interrupt _far int2F_handler (union INTPACK r) {
-    if (r.w.ax == 0x1687) {
-        // mark DPMI as not present
-        return;
-    } else _chain_intr(irq2F_oldhandler);
-}
-
 // mad stuff!
 void dos_shell() {
     ptc_donemode();
@@ -68,6 +69,8 @@ void dos_shell() {
         mov eax, 3
         int 0x10
     }
+    if (int1B_oldhandler != NULL) _dos_setvect(0x1B, int1B_oldhandler);       // restore ctrl-break handler
+
     char *cwd = getcwd(NULL, NULL);
     uint32_t drive, dummy; _dos_getdrive(&drive);
     //printf("cwd = %s\n", cwd);
@@ -82,6 +85,9 @@ void dos_shell() {
     chdir(cwd);
     free(cwd);
     _dos_setdrive(drive, &dummy);
+
+    if (int1B_oldhandler != NULL) _dos_setvect(0x1B, int1B_handler);
+
     // reinit gfx mode
     int rtn;
     if ((rtn = ptc_setmode(gfx_mode)) != ptc_errOK) {
@@ -246,6 +252,10 @@ int main(int argc, char* argv[]) {
         if (atmta::init()) goto deinit;
     }
     printf("."); fflush(stdout);
+
+    // hook Ctrl-Break 
+    int1B_oldhandler = _dos_getvect(0x1B);
+    _dos_setvect(0x1B, int1B_handler);
 
     printf("-----------------------\n");
     if (set_gfx() != false) goto deinit;
