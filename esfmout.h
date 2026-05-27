@@ -20,6 +20,8 @@ extern uint32_t esfm_base;
 #define esfm_set_volume(...)
 #define esfm_get_volume(...)
 
+#define flip_iopm(...)
+
 #else
 void esfm_delay(int timeout);
 void esfm_set_baseport(uint32_t base);
@@ -34,6 +36,10 @@ uint32_t esfm_detect();
 
 void esfm_set_volume(uint32_t volume);
 uint32_t esfm_get_volume();
+
+// patch IO permission map in TSS
+int flip_iopm(uint32_t base, uint32_t num_ports, bool unlock);
+
 #endif
 
 #ifdef __cplusplus

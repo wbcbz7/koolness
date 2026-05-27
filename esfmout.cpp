@@ -11,6 +11,8 @@
 #include "main.h"
 
 #include <flexptc.h>    // for vsync hack
+#include "dpmi.h"
+#include "lowlevel.h"   // for TSS exploit stuff
 //#define VSYNC_HACK
 
 uint32_t esfm_base;
@@ -184,6 +186,89 @@ static void esfm_activate(uint32_t iobase) {
     outp(iobase + 0x07, 66); esfm_delay(1);     // power management register
 }
 
+// ----------------------
+// evil TSS hack to gain access to ESFM ports under Win9x WDM drivers :meatjob:
+
+static uint8_t iopm_saved[2]; // saved IO permission map for 16 consecutive ports
+
+struct tss_info_t {
+    uint8_t* base;
+    uint32_t limit;         // limit+1
+    uint32_t ioperm_ofs;    // offset of I/O permission map
+    uint32_t ioperm_size;
+};
+
+static int get_tss(tss_info_t * tss) {
+    if (tss == NULL) return 1;
+
+    descriptorTableAddr gdtPtr;
+    sgdt(&gdtPtr);
+
+    _dpmi_descriptor* gdt = (_dpmi_descriptor*)gdtPtr.base;
+    _dpmi_descriptor* cdt = gdt;      // current descriptor table
+    uint32_t cdt_limit = gdtPtr.limit;
+    uint32_t tssSelector = str();
+
+    if (tssSelector != 0) {
+        // found it
+        if (tssSelector & 4) {
+            // TSS located in LDT
+            uint32_t ld = sldt(); _dpmi_descriptor* ldt = (_dpmi_descriptor*)(FP_OFF(gdt) + (ld & ~7));
+            void* ldtAddr = (void*)((ldt->base_low) | (ldt->base_mid << 16) | (ldt->base_high << 24));
+            cdt = (_dpmi_descriptor*)ldtAddr;
+            cdt_limit = ((ldt->limit_low) | (ldt->limit_high << 16));    // TODO: limit granularity check?
+        }
+
+        // check if TSS is within limits (technically this should never happen as CPU will fault if invalid TSS is loaded)
+        if (tssSelector > cdt_limit) return 1;
+
+        // find TSS in current descriptor table
+        _dpmi_descriptor *tssDescriptor = cdt + (tssSelector >> 3);
+        tss->base        = (uint8_t*)((tssDescriptor->base_low) | (tssDescriptor->base_mid << 16) | (tssDescriptor->base_high << 24));
+        tss->limit       = ((tssDescriptor->limit_low) | (tssDescriptor->limit_high << 16));    // TODO: limit granularity check?
+        tss->ioperm_ofs  = *(uint16_t*)(tss->base + 0x66);
+        if (tss->ioperm_ofs > tss->limit) return 1; // ioperm map is invalid
+        tss->ioperm_size = (tss->limit+1) - tss->ioperm_ofs;
+
+        return 0;
+    } else return 1;
+}
+
+int flip_iopm(uint32_t base, uint32_t num_ports, bool unlock) {
+    // first check if we're on ring0 already, then we don't need to mess with this stuff at all
+    if ((CS() & 3) == 0) return 0;
+
+    // if num_ports higher than 16, fail (not enough room in static storage for saved IOPM)
+    if (num_ports > 16) return 1;
+
+    // get TSS and check if there's enough room for registers to unlock
+    tss_info_t tssinfo;
+    if ((get_tss(&tssinfo)) || (tssinfo.base == NULL)) return 1;   // oops no TSS
+
+    // adjust base port and ports num
+    base >>= 3; num_ports >>= 3;
+    if ((base + num_ports - 1) >= tssinfo.ioperm_size) return 1;      // not covered by TSS, can't patch
+
+    if (unlock) {
+        for (int i = 0; i < num_ports; i++) {
+            iopm_saved[i] = tssinfo.base[tssinfo.ioperm_ofs + base + i];
+            tssinfo.base[tssinfo.ioperm_ofs + base + i] = 0;    // all ports unlocked!
+        }
+    } else {
+        for (int i = 0; i < num_ports; i++) {
+            tssinfo.base[tssinfo.ioperm_ofs + base + i] = iopm_saved[i];
+        }
+    }
+
+    // reload TSS by triggering ring0 switch
+    _asm {
+        mov eax, 0x0400
+        int 0x31            // get DPMI version, discard results
+    }
+
+    return 0;
+}
+
 // searches for ESFM, returns base address
 uint32_t esfm_detect() {
     uint32_t iobase = 0; 
@@ -219,6 +304,9 @@ uint32_t esfm_detect() {
 #ifdef DEBUG
     printf("iobase = %X\n", iobase);
 #endif
+
+    // unlock ports in IOPM if requested
+    if (mainprops.tss_unlock)     flip_iopm(iobase, 16, true);
 
     // activate ESFM
     if (mainprops.activate_mixer) esfm_activate(iobase);

@@ -30,7 +30,7 @@
 #include "menu.h"
 #include "introrc.h"
 
-main_props_t mainprops;
+main_props_t mainprops = {0};
 
 PTC_MODEHANDLE gfx_mode;
 
@@ -42,6 +42,7 @@ void close_all() {
     // set ESFM back to OPL3 mode
     esfm_reset();
     esfm_disable();
+    if (mainprops.tss_unlock) flip_iopm(esfm_base, 16, false);
 
     // free opmplay
     opmplay_free(&player_ctx.opm);
@@ -162,7 +163,7 @@ int main(int argc, char* argv[]) {
     mainprops.activate_mixer = false;
     mainprops.disable_volume_ctrl = false;
 
-    printf("koolnESS - an ESFM music disk - the furnace posse - v1.02 - 2o24-2o26\n");
+    printf("koolnESS - an ESFM music disk - the furnace posse - v1.01 - 2o24-2o26\n");
     printf("-----------------------------------\n");
 
     // TODO: command line parsing
@@ -177,6 +178,7 @@ int main(int argc, char* argv[]) {
             printf("fast     - remove delays from ESFM register out (can sound glitchy!)\n");
             printf("enable   - force enable ESFM via mixer (try this if sound is absent)\n");
             printf("loud     - disable volume control\n");
+            printf("unlock   - unlock ESFM ports for Win9x/WDM drivers\n");
             return 0;
         }
 #if 0
@@ -209,6 +211,9 @@ int main(int argc, char* argv[]) {
 #endif
         if (toupper(argv[p][0]) == 'F') {
             mainprops.fast_esfm_out = true;
+        }
+        if (toupper(argv[p][0]) == 'U') {
+            mainprops.tss_unlock = true;
         }
     }
 

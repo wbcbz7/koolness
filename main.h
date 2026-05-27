@@ -36,6 +36,9 @@ struct main_props_t {
 
     // disable volume controls
     bool disable_volume_ctrl;
+
+    // unlock ESFM ports by patching TSS
+    bool tss_unlock;
 };
 
 extern "C" {

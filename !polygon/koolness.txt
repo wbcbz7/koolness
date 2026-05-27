@@ -37,8 +37,15 @@
 
    works under EMM386/QEMM/Jemm, but if possible, run under HIMEM only
 
-   may work under Win9x (not in the background tho) if VxD drivers are used
-   WDM drivers seem to block access to ESFM ports and I have no time to fix.
+   also works under Win9x now! if VxD drivers are used, it should run as is.
+   if there's no sound, try "enable" switch.
+   WDM drivers need both "unlock" and "enable" switches to work.
+   add "rtc" switch if you want to play music in the background.
+   if your card is not Solo-1 and not at 0x220, make sure BLASTER var is set!
+
+   if it crashes with "can't load texture" or "can't load [module], skip",
+   then it could be caused by insufficient free DOS file handles available.
+   try increasing FILES= in CONFIG.SYS and restart - usually it helps.
 
    if you don't have an ESS card, latest DOSBox-X has recently added ESFM
    emulation - set [sblaster] sbtype=ess688 and oplmode=esfm in dosbox.conf.
@@ -59,7 +66,7 @@
    ATi users: choose 320x240 VESA (not VGA), vsync on.
    3dfx Banshee/Voodoo3+: use either 320x240 VESA or 320x200 VGA 60hz
 
- :: command line
+ :: command line switches
    auto    - automatic video mode selection
    potato  - lower graphics quality (may help for a bit)
    nointro - skip intro
@@ -68,6 +75,9 @@
              (can be used to improve speed, but may introduce sound glitches)
    enable  - force enable ESFM via mixer (try this if sound is absent)
    loud    - disable volume control
+   unlock  - unlock ESFM I/O ports for Windows 9x WDM drivers.
+             done by patching I/O permission map of the current DOS VM task,
+             so it will probably crash under other systems. don't try on NT :)
 
  :: keys
    Up/Down - select song
@@ -84,69 +94,72 @@
    F       - toggle remove delays from ESFM register write routine
  
  :: dos shell
-    yes, you can jam to the ESFM tunes and simultaneously work in DOS!
-    note that this is wildly experimental stuff, and i take no responsibility
-    for any screw-ups and bugs - use at your own risk :)
+   yes, you can jam to the ESFM tunes and simultaneously work in DOS!
+   note that this is wildly experimental stuff, and i take no responsibility
+   for any screw-ups and bugs - use at your own risk :)
 
-    if any DOS application reprograms IRQ0, music tempo will screw up! in 
-    this case, run musicdisk with "rtc" switch to use RTC IRQ8 instead of IRQ0
+   if any DOS application reprograms IRQ0, music tempo will screw up! in 
+   this case, run musicdisk with "rtc" switch to use RTC IRQ8 instead of IRQ0
 
-    by default, PMODE/W is configured to take all the extended memory in
-    the system, so if you shell out to DOS, EMS/XMS memory is not available.
+   by default, PMODE/W is configured to take all the extended memory in
+   the system, so if you shell out to DOS, EMS/XMS memory is not available.
     
-    fortunately, there is a workaround - use external DPMI server such as 
-    HDPMI32, which allocates DPMI memory on demand:
-     ------- cut -----------
-      hdpmi32.exe -r               // make HDPMI32 resident
-      koolness.exe rtc             // use RTC IRQ8 to keep music tempo
-     ------- cut -----------
-    then press 'D' in main menu and you're set!
-    another neat feature of HDPMI32 is that it can run multiple DPMI apps
-    at once - including DOOM ;)
+   fortunately, there is a workaround - use external DPMI server such as 
+   HDPMI32, which allocates DPMI memory on demand:
+    ------- cut -----------
+     hdpmi32.exe -r               // make HDPMI32 resident
+     koolness.exe rtc             // use RTC IRQ8 to keep music tempo
+    ------- cut -----------
+   then press 'D' in main menu and you're set!
+   another neat feature of HDPMI32 is that it can run multiple DPMI apps
+   at once - including DOOM ;)
 
  :: bugs and issues
-    sorry for slow intro - made in a total hurry and totally unoptimized :)
-    dos shell is not quite stable for the same reason
+   sorry for slow intro - made in a total hurry and totally unoptimized
+   dos shell is not quite stable for the same reason
+
+   at least ESFM mixer quirks and file handle leaks should be fixed now :)
     
  :: credits
-    idea, code, gfx and design - wbcbz7 (also known as artёmka)
-    music:
-     1. essneuro (aka Eccentric Super Frequency Modulation) by Abstract 64 
-     2. Cielos ESFuMados by Natt
-     3. Deadline by Raijin
-     4. Devil Detective by Laggy
-     5. experiment by tapekeep
-     6. Second Start by Spinning Square Waves
-     7. Walk in the Park by PotaJoe
-     8. Napalm-Loader by GTR3QQ (original by Phandral/Sanxion)
-     9. X EVIL SOUL by dj.tuBIG/MaliceX (original by shyoo) 
+   idea, code, gfx and design - wbcbz7 (also known as artёmka)
+   music:
+    1. essneuro (aka Eccentric Super Frequency Modulation) by Abstract 64 
+    2. Cielos ESFuMados by Natt
+    3. Deadline by Raijin
+    4. Devil Detective by Laggy
+    5. experiment by tapekeep
+    6. Second Start by Spinning Square Waves
+    7. Walk in the Park by PotaJoe
+    8. Napalm-Loader by GTR3QQ (original by Phandral/Sanxion)
+    9. X EVIL SOUL by dj.tuBIG/MaliceX (original by shyoo) 
 
-    lz4 decompressor made from heavily butchered smalllz4 by stephan brumme
-    rocket by a bunch of norwegian sceners
-    pmode/w by tran and daredevil
-    hdpmi32 by japheth
+   lz4 decompressor made from heavily butchered smalllz4 by stephan brumme
+   rocket by a bunch of norwegian sceners
+   pmode/w by tran and daredevil
+   hdpmi32 by japheth
 
  :: thanks 
-    tildearrow - for making the best multisystem chiptune tracker in the world!
-    natt       - for awesome tunes and overall interest in the release :)
-    gtr3qq     - for testing on ES1688 and Solo-1
-    pator and grongy - invaluable moral support 
-    thegreatcodeholio and kagamiin - for DOSBox-X and ESFMu, respectively
-    therealzago - for testing on Dell laptop and bug reporting
+   tildearrow - for making the best multisystem chiptune tracker in the world!
+   natt       - for awesome tunes and overall interest in the release :)
+   gtr3qq     - for testing on ES1688 and Solo-1
+   pator and grongy - invaluable moral support 
+   thegreatcodeholio and kagamiin - for DOSBox-X and ESFMu, respectively
+   therealzago - for testing on Dell laptop and bug reporting
 
-    philscomputerlab - next time PLEASE ask before duping the capture, ok? :)
+   philscomputerlab - next time PLEASE ask before duping the capture, ok? :)
 
  :: contact
-    join furnace tracker discord at https://discord.gg/EfrwT2wq7z!
+   join furnace tracker discord at https://discord.gg/EfrwT2wq7z!
 
-    for contacting me (artёmka), write at t.me/wbcbz7, discord:wbcbz7, or, as
-    last resort, mail to wbcbz7(dot)at(at)gmail(dot)com (sometimes i'm lazy
-    to check email often :)
+   for contacting me (artёmka), write at t.me/wbcbz7, discord:wbcbz7, or, as
+   last resort, mail to wbcbz7(dot)at(at)gmail(dot)com (sometimes i'm lazy
+   to check email often :)
 
  :: last words
-    well yea, the furnace posse left as ad-hoc label solely for this release.
-    at Xenium 2024 I (artёmka) teamed up with members of (ex-)ayce, joker,
-    moonshine/etc and now we are bending the chips under an Otomata Labs group
-    check our hottest releases at https://demozoo.org/groups/144484 !  =)
+   okay so "the furnace posse" left as ad-hoc label solely for this release.
+   as you probably already knew, at Xenium 2024 I (artёmka) teamed up with
+   members of (ex-)ayce, joker, moonshine, slipstream etc and now we are 
+   bending chips (and platforms) under an Otomata Labs group label =)
+   check our hottest releases at https://demozoo.org/groups/144484 !
 
- .26.o6.2o24 - o5.o5.2o24 - o6.o2.2o25
+ .26.o6.2o24 - o5.o5.2o24 - o6.o2.2o25 - 27.o5.2o26
