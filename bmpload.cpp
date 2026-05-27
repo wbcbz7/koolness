@@ -88,5 +88,6 @@ int bmp_load8_data(const char * fname, BITMAPV5HEADER * head, uint8_t * buf, uin
     // fix height sign
     if (head->bV5Height < 0) head->bV5Height = -head->bV5Height;
 
+    fclose(f);
     return 0;
 }
