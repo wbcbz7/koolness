@@ -38,7 +38,7 @@
    works under EMM386/QEMM/Jemm, but if possible, run under HIMEM only
 
    also works under Win9x now! if VxD drivers are used, it should run as is.
-   if there's no sound, try "enable" switch.
+   if there's no sound, try "enable" switch. e.g. "koolness.exe enable"
    WDM drivers need both "unlock" and "enable" switches to work.
    add "rtc" switch if you want to play music in the background.
    if your card is not Solo-1 and not at 0x220, make sure BLASTER var is set!

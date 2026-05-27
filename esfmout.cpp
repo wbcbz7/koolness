@@ -18,6 +18,7 @@
 uint32_t esfm_base;
 static uint32_t esfm_volume_mixer;
 static uint32_t esfm_volume = 15;
+static bool esfm_was_native = false;
 
 void esfm_delay(int timeout) {
     do { _asm {in al, 0xE1} } while (--timeout);
@@ -112,9 +113,19 @@ void esfm_enable() {
 }
 
 void esfm_disable() {
-    outp(esfm_base + 0, 0);
-    _asm {in al, 0xE1};
-    _asm {in al, 0xE1};
+    if (esfm_was_native) {
+        // back to native mode
+        outp(esfm_base + 2, 0x05);
+        _asm {in al, 0xE1};
+        _asm {in al, 0xE1};
+        outp(esfm_base + 3, 0x81);
+        _asm {in al, 0xE1};
+        _asm {in al, 0xE1};
+    } else {
+        outp(esfm_base + 0, 0);
+        _asm {in al, 0xE1};
+        _asm {in al, 0xE1};
+    }
 
     // restore mixer volume
     esfm_set_volume(esfm_volume_mixer);
@@ -129,6 +140,24 @@ void esfm_reset() {
 
 bool esfm_try_detect(uint32_t oplbase) {
     bool rtn = false;
+
+    // first try to read compatibility register
+    outp(oplbase + 2, 0x05);
+    esfm_delay(128);
+    outp(oplbase + 3, 0x05); // select ESFM reg 0x505 (or OPL3 bank 1 reg 0x05)
+    esfm_delay(1024);
+    int ii = inp(oplbase + 1);
+    if ((ii & ~1) == 0x80) {        // mask out bit 0
+        // it's a ESFM!
+        esfm_was_native = true;
+        rtn = true;
+        // return to OPL3-compatible mode
+        outp(oplbase, 0);
+
+        // no need for further detection
+        return rtn;
+    }
+
     // enable OPL3 mode
     outp(oplbase + 2, 0x05);
     esfm_delay(128);
@@ -144,7 +173,7 @@ bool esfm_try_detect(uint32_t oplbase) {
     esfm_delay(128);
     outp(oplbase + 3, 0x05); // select ESFM reg 0x505 (or OPL3 bank 1 reg 0x05)
     esfm_delay(1024);
-    int ii = inp(oplbase + 1);
+    ii = inp(oplbase + 1);
     if (ii == 0x80) {
         // it's a ESFM!
         rtn = true;
