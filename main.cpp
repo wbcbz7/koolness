@@ -40,8 +40,8 @@ PTC_MODEHANDLE gfx_mode;
 #include <direct.h>
 
 // dummy Ctrl-Break ISR to prevent accidential exit
-static void (__interrupt __far *int1B_oldhandler)() = NULL;
-void _interrupt _far int1B_handler() {
+static void (__interrupt __far *int23_oldhandler)() = NULL;
+void _interrupt _far int23_handler() {
 }
 
 void close_all() {
@@ -50,7 +50,7 @@ void close_all() {
     irq0_freeTimer();
 
     // restore Ctrl-Break handler
-    if (int1B_oldhandler != NULL) _dos_setvect(0x1B, int1B_oldhandler);
+    if (int23_oldhandler != NULL) _dos_setvect(0x23, int23_oldhandler);
 
     // set ESFM back to OPL3 mode
     esfm_reset();
@@ -69,7 +69,7 @@ void dos_shell() {
         mov eax, 3
         int 0x10
     }
-    if (int1B_oldhandler != NULL) _dos_setvect(0x1B, int1B_oldhandler);       // restore ctrl-break handler
+    if (int23_oldhandler != NULL) _dos_setvect(0x23, int23_oldhandler);       // restore ctrl-break handler
 
     char *cwd = getcwd(NULL, NULL);
     uint32_t drive, dummy; _dos_getdrive(&drive);
@@ -86,7 +86,7 @@ void dos_shell() {
     free(cwd);
     _dos_setdrive(drive, &dummy);
 
-    if (int1B_oldhandler != NULL) _dos_setvect(0x1B, int1B_handler);
+    if (int23_oldhandler != NULL) _dos_setvect(0x23, int23_handler);
 
     // reinit gfx mode
     int rtn;
@@ -254,8 +254,8 @@ int main(int argc, char* argv[]) {
     printf("."); fflush(stdout);
 
     // hook Ctrl-Break 
-    int1B_oldhandler = _dos_getvect(0x1B);
-    _dos_setvect(0x1B, int1B_handler);
+    int23_oldhandler = _dos_getvect(0x23);
+    _dos_setvect(0x23, int23_handler);
 
     printf("-----------------------\n");
     if (set_gfx() != false) goto deinit;
