@@ -38,25 +38,19 @@ Build Win32 .exe by running `wmake -f makewin.mak`. you'll need BASS.DLL to run 
 
 ### additional known bugs
 
-* "tapekeep" was misspelled as "tapekeeper"
-
-* 3dfx Banshee/Voodoo 3+ cards can't handle custom 320x200 60hz letterbox tweak in VESA modes, resulting in black screen or "out of range" message, yet reporting themselves as VGA compatible.
+* 3dfx Banshee/Voodoo 3+ cards (and apparently some versions of NVidia GeForce 2 MX Video BIOS) can't handle custom 320x200 60hz letterbox tweak in VESA modes, resulting in black screen or "out of range" message, yet reporting themselves as VGA compatible.
   * workaround - use VESA 320x240 mode or VGA 320x200 60hz
 
 ### additional credits
 
 * [fast_obj](https://github.com/thisistherk/fast_obj) by thisistherk
 * polygon filler is based on fatmap2.zip by MRI\Doomsday
-* FLEXPTC is my OpenPTC-like library to handle software rendering by providing common set of screen buffer handling stuff for DOS (VGA/VESA) and Win32 (DirectDraw/DirectX 9/OpenGL)
-  * precompiled libraries are available in `lib` folder, and I will opensource them after cleaning all the mess the source code is :)
-* `rocket.lib` is based on standard Rocket client libraries, with few modifications for DOS target (like 8.3 filenames for tracks)
+* [FLEXPTC](https://github.com/wbcbz7/FLEXPTC) is my OpenPTC-like library to handle software rendering by providing common set of screen buffer handling stuff for DOS (VGA/VESA) and Win32 (DirectDraw/DirectX 9/OpenGL)
+* `rocket.lib` is based on standard Rocket client libraries, with few modifications for DOS target (like 8.3 filenames for tracks). sadly i lost source code of modifications :(
 
 
 
---wbcbz7 25.06.2024 
-
-
-
+--wbcbz7 25.06.2024 - 28.05.2026 
 
 
 
@@ -73,4 +67,7 @@ Build Win32 .exe by running `wmake -f makewin.mak`. you'll need BASS.DLL to run 
 
 
 
-p.s. happy birthday Natt!
+
+
+
+p.s. happy birthday Natt! (soon :)
